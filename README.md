@@ -1,6 +1,6 @@
 # ckeditor-NEW-simple-link-plugin
 
-A updated simple plugin to add a link for CKEditor
+A updated simple plugin to add a link for CKEditor</br>
 Testing successful on CKEditor ver.: 4.5.9 and 4.4.8
 
 #GPL License
