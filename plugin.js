@@ -31,6 +31,17 @@
 				});
 			}
 
+			editor.on( 'selectionChange', function( evt ){
+				if ( editor.readOnly )
+				return;
+				var command = editor.getCommand( 'unlink' ),
+				element = evt.data.path.lastElement && evt.data.path.lastElement.getAscendant( 'a', true );
+				if ( element && element.getName() == 'a' && element.getAttribute( 'href' ) && element.getChildCount() )
+					command.setState( CKEDITOR.TRISTATE_OFF );
+				else
+					command.setState( CKEDITOR.TRISTATE_DISABLED );
+			});
+
 			editor.on( 'doubleclick', function( evt ) {
 				var element = CKEDITOR.plugins.link.getSelectedLink( editor ) || evt.data.element;
 				if ( !element.isReadOnly() ) {
@@ -195,32 +206,40 @@
 		}
 	});
 
+CKEDITOR.unlinkCommand = function(){};
+CKEDITOR.unlinkCommand.prototype =
+ {
+ 	/** @ignore */
+ 	exec : function( editor )
+ 	{
+ 		/*
+ 		 * execCommand( 'unlink', ... ) in Firefox leaves behind <span> tags at where
+ 		 * the <a> was, so again we have to remove the link ourselves. (See #430)
+ 		 *
+ 		 * TODO: Use the style system when it's complete. Let's use execCommand()
+ 		 * as a stopgap solution for now.
+ 		 */
+ 		var selection = editor.getSelection(),
+ 			bookmarks = selection.createBookmarks(),
+ 			ranges = selection.getRanges(),
+ 			rangeRoot,
+ 			element;
+ 
+ 		for ( var i = 0 ; i < ranges.length ; i++ )
+ 		{
+ 			rangeRoot = ranges[i].getCommonAncestor( true );
+ 			element = rangeRoot.getAscendant( 'a', true );
+ 			if ( !element )
+ 				continue;
+ 			ranges[i].selectNodeContents( element );
+ 		}
+ 
+ 		selection.selectRanges( ranges );
+ 		editor.document.$.execCommand( 'unlink', false, null );
+ 		selection.selectBookmarks( bookmarks );
+ 	},
+ 
+ 	startDisabled : true
+};
 
-
-
-
-
-	CKEDITOR.unlinkCommand = function() {};
-	CKEDITOR.unlinkCommand.prototype = {
-		exec: function( editor ) {
-			var style = new CKEDITOR.style( { element: 'a', type: CKEDITOR.STYLE_INLINE, alwaysRemoveElement: 1 } );
-			editor.removeStyle( style );
-		},
-
-		refresh: function( editor, path ) {
-			// Despite our initial hope, document.queryCommandEnabled() does not work
-			// for this in Firefox. So we must detect the state by element paths.
-
-			var element = path.lastElement && path.lastElement.getAscendant( 'a', true );
-
-			if ( element && element.getName() == 'a' && element.getAttribute( 'href' ) && element.getChildCount() )
-				this.setState( CKEDITOR.TRISTATE_OFF );
-			else
-				this.setState( CKEDITOR.TRISTATE_DISABLED );
-		},
-
-		contextSensitive: 1,
-		startDisabled: 1,
-		requiredContent: 'a[href]'
-	};
 })();
